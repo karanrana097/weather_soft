@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:weather_soft/screens/location_screen.dart';
+import 'package:weather_soft/services/location.dart';
+import 'package:weather_soft/services/networking.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+
+const apiKey = '16514699aee9a94b5e2b9008158586f1';
+
 
 class LoadingScreen extends StatefulWidget {
   @override
@@ -7,45 +13,40 @@ class LoadingScreen extends StatefulWidget {
 }
 
 class _LoadingScreenState extends State<LoadingScreen> {
+  double? latitude;
+  double? longitude;
 
-  Future<void> getLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Test if location services are enabled.
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
-    }
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low);
-    print(position);
-
-    //return await Geolocator.getCurrentPosition();
+  @override
+  void initState() {
+    super.initState();
+    getLocationData();
   }
+
+    void getLocationData() async {
+    Location location = Location();
+    await location.getCurrentLocation();
+    longitude=location.longitude;
+    latitude=location.latitude;
+    var url = Uri.https('api.openweathermap.org', '/data/2.5/weather', {
+      'lat': latitude.toString(),
+      'lon': longitude.toString(),
+      'appid': apiKey,
+    });
+    NetworkHelper networkHelper= NetworkHelper(url);
+    var weatherData= await networkHelper.getData();
+    Navigator.push(context, MaterialPageRoute(builder: (context){
+      return LocationScreen();
+    }));
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            //Get the current location
-            getLocation();
-          },
-          child: Text('Get Location'),
+        child: SpinKitDoubleBounce(
+          color: Colors.white,
+          size: 100,
         ),
       ),
     );
